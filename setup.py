@@ -6,4 +6,5 @@ setup(name='reflections',
       author='Jared Suttles',
       url='https://github.com/jaredks/reflections',
       py_modules=['reflections'],
+      long_description=open('README.md').read()
       )

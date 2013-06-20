@@ -24,10 +24,21 @@ Also maintains an inverse lookup (here with set-like objects)
 |2, 4|
 ```
 
+Normal and inverse lookup work using slice notation as well (inspired by [bidict](https://pypi.python.org/pypi/bidict))
+
+```python
+>>> d[3:]
+33
+>>> d[3:] == d[3]
+True
+>>> d[:22]
+|2, 4|
+```
+
 Can manipulate set objects directly and it will effect dictionary
 
 ```python
->>> (~d)[22] += 8
+>>> d[:22] += 8
 >>> ~d
 {33: |3, 6|, 22: |8, 2, 4|}
 >>> d
@@ -43,14 +54,14 @@ Can use mutable objects as keys (values accessed by object identity)
 >>> ~d
 {[0, 1, 2, 3, 4]@1004a7488: 5, 33: |3, 6|, 22: |8, 2, 4|}
 >>> z = d[5]
->>> (~d)[z]
+>>> d[:z]
 5
 ```
 
 Deleting a key, value pair which includes a set will delete each corresponding key, value pair in the inverse
 
 ```python
->>> del (~d)[33]
+>>> del d[:33]
 >>> ~d
 {[0, 1, 2, 3, 4]@1004a7488: 5, 22: |8, 2, 4|}
 >>> d

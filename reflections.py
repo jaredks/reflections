@@ -26,14 +26,40 @@ class ReflectiveDict(object):
                 it = tuple(it)
                 if len(it) != 2:
                     raise ValueError(
-                        'dictionary update sequence element #{} has length {}; 2 is required'.format(n, len(it)))
+                        'MirroredDict update sequence element #{} has length {}; 2 is required'.format(n, len(it)))
                 key, value = it
                 self[key] = value
         for key, value in kwargs.iteritems():
             self[key] = value
 
 
-class MirroredDict(ReflectiveDict, dict):
+class InverseEnabled(object):
+    """
+    Mix-in for methods shared between dict subclasses supporting an explicit inverted dictionary.
+    """
+    __slots__ = []
+
+    def __invert__(self):
+        return self._inverse
+    inverse = property(__invert__)
+
+    def _determine_key_direction(self, key):
+        if isinstance(key, slice):  # problem: can't use slice notation to access elements that eval to False
+            if (key.start is None) is (key.stop is None) or key.step is not None:
+                raise TypeError('item access must be either normal [key:] or inverted [:key]')
+            if key.stop is None:
+                return key.start, self
+            return key.stop, self._inverse
+        return key, self
+
+    def clear(self):
+        #super(self.__class__, self).clear()
+        #super(self.__class__, self._inverse).clear()
+        dict.clear(self)
+        dict.clear(self._inverse)
+
+
+class MirroredDict(ReflectiveDict, InverseEnabled, dict):
     """
     Implements a bidirectional mapping which allows for duplicate values by holding each key of a duplicated value in a
     set structure for the inverse dict. Can be used exactly as a normal dict but with access to an inverse mapping of
@@ -56,31 +82,24 @@ class MirroredDict(ReflectiveDict, dict):
             self._inverse._expand(value, key)
 
     def __getitem__(self, key):
+        key, whichdict = self._determine_key_direction(key)
         if key.__hash__ is None:  # if unhashable type
             key = Container(key)  # use object identity
-        return super(MirroredDict, self).__getitem__(key)
+        return super(MirroredDict, whichdict).__getitem__(key)
 
     def __setitem__(self, key, value):
-        if key in self:  # overwriting an existing key
-            if value is self[key]:  # ignore if same object (this is for += and -= of MirroredDictSet)
+        key, whichdict = self._determine_key_direction(key)
+        if key in whichdict:  # overwriting an existing key
+            if value is whichdict[key]:  # ignore if same object (this is for += and -= of MirroredDictSet)
                 return
-            self._inverse._contract(self[key], key)
-        self._inverse._expand(value, key)
-        super(MirroredDict, self).__setitem__(key, value)
+            whichdict._inverse._contract(whichdict[key], key)
+        whichdict._inverse._expand(value, key)
+        super(MirroredDict, whichdict).__setitem__(key, value)
 
     def __delitem__(self, key):
-        self._inverse._contract(self[key], key)
-        super(MirroredDict, self).__delitem__(key)
-
-    def __call__(self, key):
-        return self._inverse[key]
-
-    def __invert__(self):
-        return self._inverse
-
-    @property
-    def inverse(self):
-        return self._inverse
+        key, whichdict = self._determine_key_direction(key)
+        whichdict._inverse._contract(whichdict[key], key)
+        super(MirroredDict, whichdict).__delitem__(key)
 
     def keys(self):
         return list(self.iterkeys())
@@ -89,9 +108,9 @@ class MirroredDict(ReflectiveDict, dict):
         return (key.contents if isinstance(key, Container) else key for key in super(MirroredDict, self).iterkeys())
     __iter__ = iterkeys
 
-    def clear(self):
-        super(MirroredDict, self).clear()
-        super(MirroredDict, self._inverse).clear()
+    #def clear(self):
+    #    super(MirroredDict, self).clear()
+    #    super(MirroredDict, self._inverse).clear()
 
     def pop(self, *args, **kwargs):
         before = len(self)
@@ -192,7 +211,7 @@ class Container(object):
         return '{}@{}'.format(repr(self.contents), hex(id(self.contents))[2:])
 
 
-class BidirectionalDict(ReflectiveDict, dict):
+class BidirectionalDict(ReflectiveDict, InverseEnabled, dict):
     """
     Implements a two-way mapping of key->value and value->key in two dicts, each of which being the inverse of the
     other. Use over TwoWayDict if there is a need to distinguish between normal and inverse mappings. In other words,
@@ -214,31 +233,27 @@ class BidirectionalDict(ReflectiveDict, dict):
         super(BidirectionalDict, self).__init__(normal)
         super(BidirectionalDict, self._inverse).__init__(inverse)
 
+    def __getitem__(self, key):
+        key, whichdict = self._determine_key_direction(key)
+        return super(BidirectionalDict, whichdict).__getitem__(key)
+
     def __setitem__(self, key, value):
-        if key in self:
-            super(BidirectionalDict, self._inverse).__delitem__(self[key])
-        if value in self._inverse:
-            super(BidirectionalDict, self).__delitem__(self._inverse[value])
-        super(BidirectionalDict, self).__setitem__(key, value)
-        super(BidirectionalDict, self._inverse).__setitem__(value, key)
+        key, whichdict = self._determine_key_direction(key)
+        if key in whichdict:
+            super(BidirectionalDict, whichdict._inverse).__delitem__(whichdict[key])
+        if value in whichdict._inverse:
+            super(BidirectionalDict, whichdict).__delitem__(whichdict._inverse[value])
+        super(BidirectionalDict, whichdict).__setitem__(key, value)
+        super(BidirectionalDict, whichdict._inverse).__setitem__(value, key)
 
     def __delitem__(self, key):
-        super(BidirectionalDict, self._inverse).__delitem__(self[key])
-        super(BidirectionalDict, self).__delitem__(key)
+        key, whichdict = self._determine_key_direction(key)
+        super(BidirectionalDict, whichdict._inverse).__delitem__(whichdict[key])
+        super(BidirectionalDict, whichdict).__delitem__(key)
 
-    def __call__(self, key):
-        return self._inverse[key]
-
-    def __invert__(self):
-        return self._inverse
-
-    @property
-    def inverse(self):
-        return self._inverse
-
-    def clear(self):
-        super(BidirectionalDict, self).clear()
-        super(BidirectionalDict, self._inverse).clear()
+    #def clear(self):
+    #    super(BidirectionalDict, self).clear()
+    #    super(BidirectionalDict, self._inverse).clear()
 
     def pop(self, *args, **kwargs):
         before = len(self)
