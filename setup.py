@@ -1,10 +1,15 @@
+#!/usr/bin/env python
 from distutils.core import setup
+import reflections
 
 setup(name='reflections',
-      version='1.0',
+      version=reflections.__version__,
       description='dict subclasses for bidirectional key, value access',
       author='Jared Suttles',
       url='https://github.com/jaredks/reflections',
-      py_modules=['reflections'],
-      long_description=open('README.md').read()
+      packages=['reflections'],
+      package_data={'': ['LICENSE']},
+      package_dir={'reflections': 'reflections'},
+      long_description=open('README.md').read(),
+      license=open('LICENSE').read()
       )
