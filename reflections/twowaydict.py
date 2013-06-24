@@ -14,6 +14,10 @@ class TwoWayDict(DictSubclassMixin, dict):
     there is no logical distinction between normal and inverse mappings. In other words, when there is a mutual
     association from key to value and from value to key.
     """
+    def __init__(self, *args, **kwargs):
+        self._dictrepr = False
+        super(TwoWayDict, self).__init__(*args, **kwargs)
+
     def __setitem__(self, key, value):
         if key in self:
             super(TwoWayDict, self).__delitem__(self[key])
@@ -25,6 +29,21 @@ class TwoWayDict(DictSubclassMixin, dict):
     def __delitem__(self, key):
         super(TwoWayDict, self).__delitem__(self[key])
         super(TwoWayDict, self).__delitem__(key)
+
+    def __repr__(self):
+        if self._dictrepr:
+            return super(TwoWayDict, self).__repr__()
+        seen = set()
+        kvs = [seen.add(k) or (k,v) for k,v in self.iteritems() if v not in seen]  # hacky but fastest way I found
+        return '{{{}}}'.format(', '.join([repr(k)+'<->'+repr(v) for k,v in kvs]))
+
+    @property
+    def dictrepr(self):
+        return self._dictrepr
+
+    @dictrepr.setter
+    def dictrepr(self, choice):
+        self._dictrepr = bool(choice)
 
     def pop(self, *args, **kwargs):
         before = len(self)

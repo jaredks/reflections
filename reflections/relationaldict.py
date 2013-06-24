@@ -28,7 +28,9 @@ class RelationalDict(MirroredDict):
         super(MirroredDict, self).__setitem__(key, value)
 
     def __missing__(self, key):
-        return Reflection(self._inverse, key)
+        reflection = Reflection(self._inverse, key)
+        self[key] = reflection
+        return reflection
 
     @Container.make_key_hashable
     def _expand(self, key, value):
