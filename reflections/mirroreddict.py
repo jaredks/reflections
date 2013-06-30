@@ -71,6 +71,18 @@ class MirroredDict(InverseEnabledMixin, DictSubclassMixin, dict):
     are used as keys to allow for mutable values (just like a normal dict), they are of limited usefulness as their
     values are accessed by object identity.
     """
+    def __init__(self, *args, **kwargs):
+        self._reflectvalues = False
+        super(MirroredDict, self).__init__(*args, **kwargs)
+
+    @property
+    def reflectvalues(self):
+        return self._reflectvalues
+
+    @reflectvalues.setter
+    def reflectvalues(self, choice):
+        self._reflectvalues = choice
+
     @slice_notation
     @Container.make_key_hashable
     def __getitem__(self, key):
@@ -82,7 +94,12 @@ class MirroredDict(InverseEnabledMixin, DictSubclassMixin, dict):
             if value is self[key]:  # ignore if same object (this is for += and -= of Reflection)
                 return
             self._inverse._contract(self[key], key)
-        self._inverse._expand(value, key)
+        if self._reflectvalues:
+            reflect = Reflection(self.inverse, key)
+            reflect.update(value)
+            value = reflect
+        else:
+            self._inverse._expand(value, key)
         super(MirroredDict, self).__setitem__(key, value)
 
     @slice_notation

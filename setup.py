@@ -9,7 +9,6 @@ setup(name='reflections',
       url='https://github.com/jaredks/reflections',
       packages=['reflections'],
       package_data={'': ['LICENSE']},
-      package_dir={'reflections': 'reflections'},
       long_description=open('README.md').read(),
       license=open('LICENSE').read()
       )

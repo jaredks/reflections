@@ -69,8 +69,8 @@ Can also use mutable objects as keys (values accessed by object identity)
 'first_primes'
 ```
 
-RelatonalDict
--------------
+RelationalDict
+--------------
 
 A subclass of MirroredDict, RelationalDict is useful for mapping relationships between elements. While MirroredDict has reflection objects for the inverse dictionary when multiple keys have the same value in the normal dictionary, RelationalDict autovivifies keys with values of those reflection objects in both directions.
 
@@ -91,8 +91,15 @@ But we also want to know who is *liked by* who. Well that's easy enough.
 >>> liked_by = ~likes
 >>> liked_by
 {'Coleen': |'Trevor'|, 'Kandi': |'Thad', 'Marcos'|, 'Marcos': |'Rhona'|, 'Rhona': |'Thad'|, 'Trevor': |'Coleen'|, 'Thad': |'Rhona'|}
+```
+
+Probing in either direction is a constant time operation.
+
+```python
 >>> len(liked_by['Kandi'])
 2
+>>> 'Thad' in liked_by['Rhona']
+True
 >>> 'Coleen' in likes['Marcos']
 False
 >>> 'Coleen' in likes['Trevor']
